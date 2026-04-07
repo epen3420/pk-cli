@@ -1,0 +1,326 @@
+#!/bin/sh
+
+CONFIG="$HOME/.pk_aliases"
+LOG_DIR="$HOME/.pk_logs"
+
+[ ! -f "$CONFIG" ] && touch "$CONFIG"
+[ ! -d "$LOG_DIR" ] && mkdir -p "$LOG_DIR"
+
+print_help() {
+  cat <<EOF
+Usage: pk [command] [args]
+
+Commands:
+  register <path_to_sh> <alias>  Register a server script (.sh only)
+  rename <old_alias> <new_alias> Rename a registered alias
+  run <alias or path>            Run a registered alias or .sh path
+  delete <alias>                 Delete a registered alias
+  list                           Show all registered aliases
+  console [alias]                Attach to server screen (interactive if empty)
+  logs [alias]                   Show the log file for an alias
+
+If no command is given, it shows the list of registered aliases.
+Options:
+  --help                         Show this help message
+EOF
+}
+
+# パスの絶対パス化（realpath互換）
+get_abs_path() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+  else
+    echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+  fi
+}
+
+case "$1" in
+  register)
+    path="$2"
+    alias="$3"
+
+    if [ -z "$path" ] || [ -z "$alias" ]; then
+      echo "Usage: pk register <path_to_sh> <alias>"
+      exit 1
+    fi
+
+    case "$path" in
+      *.sh) ;;
+      *)
+        echo "Error: Only .sh files can be registered."
+        exit 1
+        ;;
+    esac
+
+    abs_path=$(get_abs_path "$path")
+
+    if [ ! -f "$abs_path" ]; then
+      echo "File not found: $abs_path"
+      exit 1
+    fi
+
+    # 既存のエイリアスがあれば削除して上書き
+    grep -v "^$alias:" "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+    echo "$alias:$abs_path" >> "$CONFIG"
+    echo "Registered $alias -> $abs_path"
+    ;;
+
+  rename)
+    old_alias="$2"
+    new_alias="$3"
+
+    if [ -z "$old_alias" ] || [ -z "$new_alias" ]; then
+      echo "Usage: pk rename <old_alias> <new_alias>"
+      exit 1
+    fi
+
+    if [ "$old_alias" = "$new_alias" ]; then
+        echo "Old and new aliases are the same."
+        exit 0
+    fi
+
+    # Check if old alias exists
+    if ! grep -q "^$old_alias:" "$CONFIG"; then
+      echo "Error: Alias '$old_alias' not found."
+      exit 1
+    fi
+
+    # Check if new alias already exists
+    if grep -q "^$new_alias:" "$CONFIG"; then
+      echo "Error: Alias '$new_alias' already exists."
+      exit 1
+    fi
+
+    # Get the path for the old alias
+    path=$(grep "^$old_alias:" "$CONFIG" | cut -d':' -f2-)
+
+    # Update config: remove old, add new
+    grep -v "^$old_alias:" "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+    echo "$new_alias:$path" >> "$CONFIG"
+
+    # Rename log file if it exists
+    old_log="$LOG_DIR/${old_alias}.log"
+    new_log="$LOG_DIR/${new_alias}.log"
+    if [ -f "$old_log" ]; then
+        mv "$old_log" "$new_log"
+        echo "Renamed log file to $(basename "$new_log")"
+    fi
+
+    echo "Renamed alias '$old_alias' to '$new_alias'"
+    ;;
+
+  run)
+    target="$2"
+
+    # 引数なし → インタラクティブ選択
+    if [ -z "$target" ]; then
+      if [ ! -s "$CONFIG" ]; then
+        echo "No aliases registered."
+        exit 1
+      fi
+
+      echo "Select a server to run:"
+      i=1
+      # 行番号と内容を表示
+      while IFS= read -r line; do
+        alias_item=$(echo "$line" | cut -d':' -f1)
+        path_item=$(echo "$line" | cut -d':' -f2-)
+        echo "  $i) $alias_item -> $path_item"
+        i=$((i+1))
+      done < "$CONFIG"
+
+      printf "Enter number: "
+      read num
+
+      # 入力が数字かチェック
+      case "$num" in
+        ''|*[!0-9]*) echo "Invalid input."; exit 1 ;;
+      esac
+
+      selected=$(sed -n "${num}p" "$CONFIG")
+      if [ -z "$selected" ]; then
+        echo "Invalid selection."
+        exit 1
+      fi
+
+      target=$(echo "$selected" | cut -d':' -f1)
+    fi
+
+    # ターゲットがエイリアスかパスか判定
+    path=$(grep "^$target:" "$CONFIG" | cut -d':' -f2-)
+
+    # エイリアスで見つからない場合はパスとして処理
+    if [ -z "$path" ]; then
+      path=$(get_abs_path "$target")
+      # セッション名用にパスから安全な名前を生成
+      alias_name=$(basename "$target" .sh)
+    else
+      alias_name="$target"
+    fi
+
+    if [ ! -f "$path" ]; then
+      echo "File not found: $path"
+      exit 1
+    fi
+
+    case "$path" in
+      *.sh) ;;
+      *)
+        echo "Error: Only .sh files can be run."
+        exit 1
+        ;;
+    esac
+
+    # セッション名（mc_ + エイリアス名）
+    session="mc_${alias_name}"
+
+    # 二重起動チェック
+    if tmux has-session -t "$session" 2>/dev/null; then
+      echo "Session '$session' is already running."
+      echo "Use 'pk console $alias_name' to attach."
+      exit 1
+    fi
+
+    dir=$(dirname "$path")
+    script=$(basename "$path")
+    log_file="$LOG_DIR/${alias_name}.log"
+
+    echo "Starting tmux session '$session'..."
+    echo "  Script: $script"
+    echo "  Dir:    $dir"
+    echo "  Log:    $log_file"
+
+    cmd="cd \"$dir\" && \
+         chmod +x \"$script\" && \
+         echo \"--- Started at \$(date) ---\" >> \"$log_file\" && \
+         ./\"$script\" 2>&1 | tee -a \"$log_file\"; \
+         echo \"\n[Process exited. Press Enter to close session...]\" && read"
+
+    tmux new-session -d -s "$session" "$cmd"
+
+    echo "Done. You can observe with: pk console"
+    ;;
+
+  delete)
+    target="$2"
+    if [ -z "$target" ]; then
+      echo "Usage: pk delete <alias>"
+      exit 1
+    fi
+    if ! grep -q "^$target:" "$CONFIG"; then
+        echo "Alias '$target' not found."
+        exit 1
+    fi
+    grep -v "^$target:" "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+    echo "Deleted alias $target"
+    ;;
+
+  logs)
+    target="$2"
+    if [ -z "$target" ]; then
+       # ログディレクトリのファイル一覧を表示
+       ls -lh "$LOG_DIR"
+       echo "Usage: pk logs <alias>"
+       exit 0
+    fi
+
+    log_file="$LOG_DIR/${target}.log"
+    if [ -f "$log_file" ]; then
+        if command -v less >/dev/null 2>&1; then
+            less +G "$log_file"
+        else
+            cat "$log_file"
+        fi
+    else
+        echo "Log file not found: $log_file"
+    fi
+    ;;
+
+  list|"")
+    if [ "$1" = "" ] && [ -n "$2" ]; then
+        print_help
+        exit 1
+    fi
+
+    echo "Registered aliases:"
+    if [ -s "$CONFIG" ]; then
+      awk -F':' '{printf "  %-10s -> %s\n", $1, $2}' "$CONFIG"
+    else
+      echo "  (no aliases registered)"
+    fi
+
+    if [ -z "$1" ]; then
+        echo ""
+        echo "Tip: Use 'pk run <alias>' to start a server."
+    fi
+    ;;
+
+  console)
+    target="$2"
+
+    if [ -z "$target" ]; then
+      sessions=$(tmux list-sessions -F '#S' 2>/dev/null | grep '^mc_' || true)
+
+      if [ -z "$sessions" ]; then
+        echo "No running server sessions."
+        exit 1
+      fi
+
+      count=$(echo "$sessions" | wc -l)
+
+      if [ "$count" -eq 1 ]; then
+        session=$(echo "$sessions" | head -n 1)
+        echo "Attaching to session $session..."
+        tmux attach -t "$session"
+        exit 0
+      fi
+
+      echo "Select a server session to attach:"
+      i=1
+      echo "$sessions" | while read -r s; do
+        echo "  $i) $s"
+        i=$((i+1))
+      done
+
+      printf "Enter number: "
+      read num
+
+      case "$num" in
+        ''|*[!0-9]*) echo "Invalid input."; exit 1 ;;
+      esac
+
+      session=$(echo "$sessions" | sed -n "${num}p")
+      if [ -z "$session" ]; then
+        echo "Invalid selection."
+        exit 1
+      fi
+
+      echo "Attaching to session $session..."
+      tmux attach -t "$session"
+      exit 0
+    fi
+
+    session="mc_${target}"
+    if tmux has-session -t "$session" 2>/dev/null; then
+      echo "Attaching to session $session..."
+      tmux attach -t "$session"
+    else
+      echo "No running session for alias '$target'."
+      # ログの確認を促す
+      log_file="$LOG_DIR/${target}.log"
+      if [ -f "$log_file" ]; then
+          echo "Check logs with: pk logs $target"
+      fi
+      exit 1
+    fi
+    ;;
+
+  --help|-h)
+    print_help
+    ;;
+
+  *)
+    print_help
+    exit 1
+    ;;
+esac

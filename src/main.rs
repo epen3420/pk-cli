@@ -5,7 +5,7 @@ mod register;
 #[derive(Parser)]
 struct Cli {
   #[command(subcommand)]
-  command: Option<Commands>
+  command: Commands
 }
 
 #[derive(Subcommand)]

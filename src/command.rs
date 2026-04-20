@@ -1,3 +1,3 @@
 pub trait Command {
-  fn execute(&self);
+  fn execute(&self) -> Result<(), Box<dyn std::error::Error>>;
 }

@@ -3,49 +3,50 @@
 use std::env::home_dir;
 use std::path::{Path, PathBuf};
 use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, BufWriter, Error, ErrorKind, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use anyhow::{Context, Error};
 
 const ALIAS_FILE_NAME: &str = ".pk_alias";
 const SPLIT_CHAR: char = ':';
 
-fn get_alias_path() -> PathBuf {
-  let home_path = home_dir().expect("Could not find home directory");
-
-  Path::join(&home_path, ALIAS_FILE_NAME)
+fn get_alias_path() -> Result<PathBuf, Error> {
+    let home_path = home_dir().context("Could not find home directory")?;
+    Ok(home_path.join(ALIAS_FILE_NAME))
 }
 
-fn get_alias_tmp_path() -> PathBuf {
-  get_alias_path().with_extension("tmp")
+fn get_alias_tmp_path() -> Result<PathBuf, Error> {
+    Ok(get_alias_path()?.with_extension("tmp"))
 }
 
-fn deserialize_line(line: &str) -> Result<(String, PathBuf), Error> {
-  let (alias_str, path_str) = line
-    .split_once(SPLIT_CHAR)
-    .ok_or_else(|| Error::new(ErrorKind::InvalidData, "Invalid alias format in file"))?;
+fn deserialize_line(line: &str) -> Result<(&str, &Path), Error> {
+    let (alias_str, path_str) = line
+        .split_once(SPLIT_CHAR)
+        .context("Invalid alias format in file")?;
 
-  Ok((String::from(alias_str), PathBuf::from(path_str)))
+    Ok((alias_str, Path::new(path_str)))
 }
 
-fn serialize_line(alias: String, path: PathBuf) -> String {
-  let path_str = path.to_string_lossy();
-
-  format!("{}{}{}", alias, SPLIT_CHAR, path_str)
+fn serialize_line(alias: &str, path: &Path) -> String {
+    format!("{}{}{}", alias, SPLIT_CHAR, path.display())
 }
 
 fn modify_lines<F>(mut modifier: F) -> Result<(), Error>
 where
     F: FnMut(&str) -> Result<Option<String>, Error>,
 {
-    let alias_path = get_alias_path();
-    let temp_path = get_alias_tmp_path();
+    let alias_path = get_alias_path()?;
+    let temp_path = get_alias_tmp_path()?;
 
-    let file_in = File::open(&alias_path)?;
+    let file_in = File::open(&alias_path)
+        .with_context(|| format!("Could not open file {}", alias_path.display()))?;
     let reader = BufReader::new(file_in);
 
     let file_out = OpenOptions::new()
         .write(true)
         .create(true)
-        .open(&temp_path)?;
+        .truncate(true)
+        .open(&temp_path)
+        .with_context(|| format!("Could not open file {}", temp_path.display()))?;
     let mut writer = BufWriter::new(file_out);
 
     for line_result in reader.lines() {
@@ -62,112 +63,125 @@ where
     Ok(())
 }
 
-pub fn create(alias: String, path: PathBuf) -> Result<(), Error> {
-  let alias_file = OpenOptions::new()
-      .append(true)
-      .create(true)
-      .open(get_alias_path())?;
-  let mut writer = BufWriter::new(alias_file);
+pub fn create(alias: &str, path: &Path) -> Result<(), Error> {
+    let alias_path = get_alias_path()?;
 
-  writeln!(writer, "{}", serialize_line(alias, path))?;
+    let alias_file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(&alias_path)
+        .context("Could not open while creating alias and path.")?;
+    let mut writer = BufWriter::new(alias_file);
 
-  Ok(())
+    writeln!(writer, "{}", serialize_line(alias, path))?;
+
+    Ok(())
 }
 
-pub fn rename(old_alias: String, new_alias: String) -> Result<(), Error> {
-  modify_lines(|line| {
-    let (current_alias, current_path) = deserialize_line(line)?;
+pub fn rename(old_alias: &str, new_alias: &str) -> Result<(), Error> {
+    modify_lines(|line| {
+        let (current_alias, current_path) = deserialize_line(line)?;
 
-    if current_alias == old_alias {
-      Ok(Some(serialize_line(new_alias.clone(), current_path.clone())))
-    }
-    else {
-      Ok(Some(line.to_string()))
-    }
-  })
+        if current_alias == old_alias {
+            Ok(Some(serialize_line(new_alias, current_path)))
+        } else {
+            Ok(Some(line.to_string()))
+        }
+    })
 }
 
-pub fn update(alias: String, new_path: PathBuf) -> Result<(), Error> {
-  modify_lines(|line| {
-    let (current_alias, _) = deserialize_line(line)?;
+pub fn update(alias: &str, new_path: &Path) -> Result<(), Error> {
+    modify_lines(|line| {
+        let (current_alias, _) = deserialize_line(line)?;
 
-    if current_alias == alias {
-      Ok(Some(serialize_line(alias.clone(), new_path.clone())))
-    }
-    else {
-      Ok(Some(line.to_string()))
-    }
-  })
+        if current_alias == alias {
+            Ok(Some(serialize_line(alias, new_path)))
+        } else {
+            Ok(Some(line.to_string()))
+        }
+    })
 }
 
-pub fn delete(alias: String) -> Result<(), Error> {
-  modify_lines(|line| {
-    let (current_alias, _) = deserialize_line(line)?;
+pub fn delete(alias: &str) -> Result<(), Error> {
+    modify_lines(|line| {
+        let (current_alias, _) = deserialize_line(line)?;
 
-    if current_alias == alias {
-      Ok(None)
-    } else {
-      Ok(Some(line.to_string()))
+        if current_alias == alias {
+            Ok(None)
+        } else {
+            Ok(Some(line.to_string()))
+        }
+    })
+}
+
+pub fn show_list() -> Result<(), Error> {
+    let alias_path = get_alias_path()?;
+
+    if !alias_path.exists() {
+        println!("No aliases registered yet.");
+        return Ok(());
     }
-  })
+
+    let alias_file = File::open(&alias_path).context("Failed to open alias file")?;
+    let reader = BufReader::new(alias_file);
+
+    for line_result in reader.lines() {
+        let line = line_result?;
+        let (alias, path) = deserialize_line(&line)?;
+        println!("{} => {}", alias, path.display());
+    }
+
+    Ok(())
 }
 
-pub fn show_list() {
-  let alias_file = File::open(get_alias_path()).unwrap();
-  let reader = BufReader::new(alias_file);
+fn main() {
+    let alias = "1234";
+    let path = Path::new("abcd");
 
-  for line_result in reader.lines() {
-    let line = line_result.unwrap();
-    let (alias, path) = deserialize_line(&line).unwrap();
+    println!("create: alias = {}, path = {}", alias, path.display());
+    create(alias, path).unwrap();
 
-    println!("{} => {}", alias, path.to_string_lossy());
-  }
-}
+    show_list().unwrap();
+    println!();
 
-fn main(){
-  let alias = "1234";
-  let path = "abcd";
+    let alias2 = "4321";
+    let path2 = Path::new("dcba");
 
-  println!("create: alias = {}, path = {}", alias, path);
-  create(alias.to_string(), PathBuf::from(path)).unwrap();
+    println!("create: alias = {}, path = {}", alias2, path2.display());
+    create(alias2, path2).unwrap();
 
-  show_list();
-  println!();
+    show_list().unwrap();
+    println!();
 
-  let alias = "4321";
-  let path = "dcba";
+    let old_alias = "1234";
+    let new_alias = "9876";
 
-  println!("create: alias = {}, path = {}", alias, path);
-  create(alias.to_string(), PathBuf::from(path)).unwrap();
+    println!("rename alias: {} to {}", old_alias, new_alias);
+    rename(old_alias, new_alias).unwrap();
 
-  show_list();
-  println!();
+    show_list().unwrap();
+    println!();
 
-  let old_alias = String::from("1234");
-  let new_alias = String::from("9876");
+    let alias3 = "4321";
+    let new_path = Path::new("zyxw");
 
-  println!("rename alias: {} to {}", old_alias, new_alias);
-  rename(old_alias, new_alias).unwrap();
+    println!("update on alias {}: new_path = {}", alias3, new_path.display());
+    update(alias3, new_path).unwrap();
 
-  show_list();
-  println!();
+    show_list().unwrap();
+    println!();
 
-  let alias = String::from("4321");
-  let new_path = PathBuf::from("zyxw");
+    let alias_to_del = "9876";
 
-  println!("update on alias {}: new_path = {}", alias, new_path.to_string_lossy());
-  update(alias, new_path).unwrap();
+    println!("delete: alias = {}", alias_to_del);
+    delete(alias_to_del).unwrap();
 
-  show_list();
-  println!();
+    show_list().unwrap();
 
-  let alias = String::from("9876");
-
-  println!("delete: alias = {}", alias);
-  delete(alias).unwrap();
-
-  show_list();
-
-  let _ = fs::remove_file(get_alias_path());
-  let _ = fs::remove_file(get_alias_tmp_path());
+    if let Ok(p) = get_alias_path() {
+        let _ = fs::remove_file(p);
+    }
+    if let Ok(p) = get_alias_tmp_path() {
+        let _ = fs::remove_file(p);
+    }
 }

@@ -134,6 +134,25 @@ pub fn show_list() -> Result<(), Error> {
     Ok(())
 }
 
+pub fn remove_alias_files() -> Result<(), Error> {
+    let alias_file_path = get_alias_path()?;
+    let alias_temp_file_path = get_alias_tmp_path()?;
+
+    let res1 = if alias_file_path.exists() {
+        fs::remove_file(&alias_file_path)
+    } else {
+        Ok(())
+    };
+
+    let res2 = if alias_temp_file_path.exists() {
+        fs::remove_file(&alias_temp_file_path)
+    } else {
+        Ok(())
+    };
+
+    res1.and(res2).map_err(|e| e.into())
+}
+
 fn main() {
     let alias = "1234";
     let path = Path::new("abcd");
@@ -178,10 +197,4 @@ fn main() {
 
     show_list().unwrap();
 
-    if let Ok(p) = get_alias_path() {
-        let _ = fs::remove_file(p);
-    }
-    if let Ok(p) = get_alias_tmp_path() {
-        let _ = fs::remove_file(p);
-    }
 }

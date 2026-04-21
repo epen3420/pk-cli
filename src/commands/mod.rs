@@ -3,6 +3,7 @@
 use clap::Subcommand;
 
 mod register;
+mod alias_list;
 
 
 pub trait Command {
@@ -11,13 +12,15 @@ pub trait Command {
 
 #[derive(Subcommand)]
 pub enum Commands {
-  Register(register::RegisterArg)
+  Register(register::RegisterArg),
+  List(alias_list::AliasListArg),
 }
 
 impl Commands {
   pub fn run(&self) -> Result<(), anyhow::Error> {
     match self {
       Self::Register(arg) => arg.execute(),
+      Self::List(arg) => arg.execute(),
     }
   }
 }

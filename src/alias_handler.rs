@@ -197,4 +197,5 @@ fn main() {
 
     show_list().unwrap();
 
+    remove_alias_files().unwrap();
 }

@@ -2,7 +2,7 @@ use anyhow::Error;
 use clap::Args;
 use std::path::PathBuf;
 
-use crate::{alias_handler, command::Command};
+use crate::{alias_handler, commands::Command};
 
 #[derive(Args)]
 pub struct RegisterArg {

@@ -1,10 +1,10 @@
-use clap::{ Parser, Subcommand };
-use crate::command::Command;
+use clap::{ Parser };
 use std::process;
 
-mod command;
+use crate::commands::{Commands};
+
+mod commands;
 mod alias_handler;
-mod register;
 
 
 #[derive(Parser)]
@@ -17,17 +17,10 @@ struct Cli {
   delete: bool,
 }
 
-#[derive(Subcommand)]
-enum Commands {
-  Register(register::RegisterArg)
-}
-
 fn main() {
   let cli = Cli::parse();
 
-  let command_result = match cli.command {
-    Commands::Register(arg) => arg.execute(),
-  };
+  let command_result = cli.command.run();
 
   #[cfg(debug_assertions)]
   if cli.delete {

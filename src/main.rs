@@ -10,7 +10,11 @@ mod register;
 #[derive(Parser)]
 struct Cli {
   #[command(subcommand)]
-  command: Commands
+  command: Commands,
+
+  #[cfg(debug_assertions)]
+  #[arg(long)]
+  delete: bool,
 }
 
 #[derive(Subcommand)]
@@ -24,6 +28,12 @@ fn main() {
   let command_result = match cli.command {
     Commands::Register(arg) => arg.execute(),
   };
+
+  #[cfg(debug_assertions)]
+  if cli.delete {
+    let _ = alias_handler::remove_alias_files();
+    println!("removed all alias files");
+  }
 
   if let Err(e) = command_result {
     eprintln!("{:?}", e);

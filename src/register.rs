@@ -12,6 +12,12 @@ pub struct RegisterArg {
 
 impl Command for RegisterArg {
   fn execute(&self) -> Result<(), Error> {
-    alias_handler::create(&self.alias, &self.path)
+    let result = alias_handler::create(&self.alias, &self.path);
+
+    if let Ok(()) = &result {
+      println!("Registered '{} => {}'", &self.alias, self.path.display());
+    }
+
+    result
   }
 }

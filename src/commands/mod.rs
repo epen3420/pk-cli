@@ -4,6 +4,7 @@ use clap::Subcommand;
 
 mod register;
 mod alias_list;
+mod remove_alias_files;
 
 
 pub trait Command {
@@ -14,6 +15,9 @@ pub trait Command {
 pub enum Commands {
   Register(register::RegisterArg),
   List(alias_list::AliasListArg),
+
+  #[cfg(debug_assertions)]
+  Remove(remove_alias_files::RemoveArg),
 }
 
 impl Commands {
@@ -21,6 +25,8 @@ impl Commands {
     match self {
       Self::Register(arg) => arg.execute(),
       Self::List(arg) => arg.execute(),
+      #[cfg(debug_assertions)]
+      Self::Remove(arg) => arg.execute(),
     }
   }
 }

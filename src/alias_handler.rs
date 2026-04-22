@@ -134,21 +134,21 @@ pub fn show_list() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn remove_alias_files() -> Result<(), Error> {
-    let alias_file_path = get_alias_path()?;
-    let alias_temp_file_path = get_alias_tmp_path()?;
+pub fn remove_alias_file() -> Result<(), Error> {
+    let file_path = get_alias_path()?;
 
-    let res1 = if alias_file_path.exists() {
-        fs::remove_file(&alias_file_path)
-    } else {
-        Ok(())
-    };
+    fs::remove_file(&file_path).context(format!("Could not remove {}", &file_path.display()))
+}
 
-    let res2 = if alias_temp_file_path.exists() {
-        fs::remove_file(&alias_temp_file_path)
-    } else {
-        Ok(())
-    };
+pub fn remove_alias_temp_file() -> Result<(), Error> {
+    let file_path = get_alias_tmp_path()?;
+
+    fs::remove_file(&file_path).context(format!("Could not remove {}", &file_path.display()))
+}
+
+pub fn rmeove_all_alias_files() -> Result<(), Error> {
+    let res1 = remove_alias_file();
+    let res2 = remove_alias_temp_file();
 
     res1.and(res2).map_err(|e| e.into())
 }
@@ -197,5 +197,6 @@ fn main() {
 
     show_list().unwrap();
 
-    remove_alias_files().unwrap();
+    let _ = remove_alias_file();
+    let _ = remove_alias_temp_file();
 }

@@ -30,6 +30,22 @@ fn serialize_line(alias: &str, path: &Path) -> String {
     format!("{}{}{}", alias, SPLIT_CHAR, path.display())
 }
 
+fn alias_iterator() -> Result<impl Iterator<Item = Result<(String, PathBuf), Error>>, Error> {
+    let alias_path = get_alias_path()?;
+    let alias_file = File::open(&alias_path).context("Failed to open alias file")?;
+    let reader = BufReader::new(alias_file);
+
+    let iter = reader.lines().map(|line_result| {
+        let line = line_result?;
+        match deserialize_line(&line) {
+            Ok((alias, path)) => Ok((String::from(alias), PathBuf::from(path))),
+            Err(e) => Err(e)
+        }
+    });
+
+    Ok(iter)
+}
+
 fn modify_lines<F>(mut modifier: F) -> Result<(), Error>
 where
     F: FnMut(&str, &str, &Path) -> Result<Option<String>, Error>,

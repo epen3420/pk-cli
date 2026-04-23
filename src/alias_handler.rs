@@ -130,19 +130,10 @@ pub fn delete(alias: &str) -> Result<(), Error> {
 }
 
 pub fn show_list() -> Result<(), Error> {
-    let alias_path = get_alias_path()?;
+    let alias_iter = alias_iterator()?;
 
-    if !alias_path.exists() {
-        println!("No aliases registered yet.");
-        return Ok(());
-    }
-
-    let alias_file = File::open(&alias_path).context("Failed to open alias file")?;
-    let reader = BufReader::new(alias_file);
-
-    for line_result in reader.lines() {
-        let line = line_result?;
-        let (alias, path) = deserialize_line(&line)?;
+    for result in alias_iter {
+        let (alias, path) = result?;
         println!("{} => {}", alias, path.display());
     }
 

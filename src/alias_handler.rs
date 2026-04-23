@@ -32,7 +32,7 @@ fn serialize_line(alias: &str, path: &Path) -> String {
 
 fn modify_lines<F>(mut modifier: F) -> Result<(), Error>
 where
-    F: FnMut(&str) -> Result<Option<String>, Error>,
+    F: FnMut(&str, &str, &Path) -> Result<Option<String>, Error>,
 {
     let alias_path = get_alias_path()?;
     let temp_path = get_alias_tmp_path()?;
@@ -55,8 +55,9 @@ where
 
     for line_result in reader.lines() {
         let line = line_result?;
+        let (alias, path) = deserialize_line(&line)?;
 
-        if let Some(modified_line) = modifier(&line)? {
+        if let Some(modified_line) = modifier(&line, &alias, &path)? {
             writeln!(writer, "{}", modified_line)?;
         }
     }
@@ -83,37 +84,31 @@ pub fn create(alias: &str, path: &Path) -> Result<(), Error> {
 }
 
 pub fn rename(old_alias: &str, new_alias: &str) -> Result<(), Error> {
-    modify_lines(|line| {
-        let (current_alias, current_path) = deserialize_line(line)?;
-
+    modify_lines(|current_line, current_alias, current_path| {
         if current_alias == old_alias {
             Ok(Some(serialize_line(new_alias, current_path)))
         } else {
-            Ok(Some(line.to_string()))
+            Ok(Some(current_line.to_string()))
         }
     })
 }
 
 pub fn update(alias: &str, new_path: &Path) -> Result<(), Error> {
-    modify_lines(|line| {
-        let (current_alias, _) = deserialize_line(line)?;
-
+    modify_lines(|current_line, current_alias, _| {
         if current_alias == alias {
-            Ok(Some(serialize_line(alias, new_path)))
+            Ok(Some(serialize_line(current_alias, new_path)))
         } else {
-            Ok(Some(line.to_string()))
+            Ok(Some(current_line.to_string()))
         }
     })
 }
 
 pub fn delete(alias: &str) -> Result<(), Error> {
-    modify_lines(|line| {
-        let (current_alias, _) = deserialize_line(line)?;
-
+    modify_lines(|current_line, current_alias, _| {
         if current_alias == alias {
             Ok(None)
         } else {
-            Ok(Some(line.to_string()))
+            Ok(Some(current_line.to_string()))
         }
     })
 }

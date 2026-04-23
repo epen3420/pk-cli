@@ -129,7 +129,19 @@ pub fn delete(alias: &str) -> Result<(), Error> {
     })
 }
 
+pub fn has_alias(alias: &str) -> Result<bool, Error> {
+    let alias_iter = alias_iterator()?;
 
+    for result in alias_iter {
+        let (current_alias, _) = result?;
+
+        if current_alias == alias {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
 
 pub fn get_path_by_alias(alias: &str) -> Result<PathBuf, Error>{
     let alias_iter = alias_iterator()?;

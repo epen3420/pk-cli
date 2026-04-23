@@ -4,7 +4,7 @@ use std::env::home_dir;
 use std::path::{Path, PathBuf};
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 
 const ALIAS_FILE_NAME: &str = ".pk_alias";
 const SPLIT_CHAR: char = ':';
@@ -127,6 +127,22 @@ pub fn delete(alias: &str) -> Result<(), Error> {
             Ok(Some(current_line.to_string()))
         }
     })
+}
+
+
+
+pub fn get_path_by_alias(alias: &str) -> Result<PathBuf, Error>{
+    let alias_iter = alias_iterator()?;
+
+    for result in alias_iter {
+        let (current_alias, current_path) = result?;
+
+        if current_alias == alias {
+            return Ok(current_path);
+        }
+    }
+
+    Err(anyhow!("Alias {} not found", alias))
 }
 
 pub fn show_list() -> Result<(), Error> {

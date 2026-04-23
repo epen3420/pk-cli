@@ -1,6 +1,6 @@
 use clap::Args;
 
-use crate::{alias_handler, commands::Command};
+use crate::{alias_handler::AliasManager, commands::Command};
 
 #[derive(Args)]
 pub struct AliasListArg {
@@ -9,6 +9,7 @@ pub struct AliasListArg {
 
 impl Command for AliasListArg {
   fn execute(&self) -> Result<(), anyhow::Error> {
-    alias_handler::show_list()
+    let alias_manager = AliasManager::new()?;
+    alias_manager.show_list()
   }
 }

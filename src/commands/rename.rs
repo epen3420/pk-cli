@@ -1,7 +1,7 @@
 use anyhow::Error;
 use clap::Args;
 
-use crate::{alias_handler, commands::Command};
+use crate::{alias_handler::AliasManager, commands::Command};
 
 #[derive(Args)]
 pub struct RenameArg {
@@ -11,7 +11,8 @@ pub struct RenameArg {
 
 impl Command for RenameArg {
   fn execute(&self) -> Result<(), Error> {
-    let result = alias_handler::rename(&self.old_alias, &self.new_alias);
+    let alias_manager = AliasManager::new()?;
+    let result = alias_manager.rename(&self.old_alias, &self.new_alias);
 
     if let Ok(()) = &result {
       println!("Renamed '{} => {}'", &self.old_alias, self.new_alias);

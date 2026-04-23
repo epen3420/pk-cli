@@ -1,7 +1,7 @@
 use anyhow::{Error};
 use clap::Args;
 
-use crate::{alias_handler::{remove_alias_file, rmeove_all_alias_files}, commands::Command};
+use crate::{alias_handler::AliasManager, commands::Command};
 
 #[derive(Args)]
 pub struct RemoveArg {
@@ -11,11 +11,12 @@ pub struct RemoveArg {
 
 impl Command for RemoveArg {
   fn execute(&self) -> Result<(), Error> {
+    let alias_manager = AliasManager::new()?;
     if self.all {
-      rmeove_all_alias_files()
+      alias_manager.rmeove_all_alias_files()
     }
     else {
-      remove_alias_file()
+      alias_manager.remove_alias_file()
     }
   }
 }

@@ -37,7 +37,11 @@ where
     let alias_path = get_alias_path()?;
     let temp_path = get_alias_tmp_path()?;
 
-    let file_in = File::open(&alias_path)
+    let file_in = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&alias_path)
         .with_context(|| format!("Could not open file {}", alias_path.display()))?;
     let reader = BufReader::new(file_in);
 

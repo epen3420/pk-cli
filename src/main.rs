@@ -5,7 +5,7 @@ use crate::commands::{Commands};
 
 mod commands;
 mod alias_handler;
-
+mod tmux_handler;
 
 #[derive(Parser)]
 struct Cli {

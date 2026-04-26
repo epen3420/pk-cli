@@ -24,6 +24,11 @@ impl AliasManager {
         Ok(Self { file_path, tmp_path })
     }
 
+    pub fn with_path(file_path: PathBuf) -> Self {
+        let tmp_path = file_path.with_extension("tmp");
+        Self { file_path, tmp_path }
+    }
+
     fn deserialize_line(line: &str) -> Result<(&str, &Path), Error> {
         let (alias_str, path_str) = line
             .split_once(SPLIT_CHAR)
@@ -187,10 +192,12 @@ impl AliasManager {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::env::temp_dir;
 
     #[test]
     fn test_alias_manager() -> Result<(), anyhow::Error> {
-        let alias_manager = AliasManager::new()?;
+        let test_file_path = temp_dir().join(".pk_alias_test");
+        let alias_manager = AliasManager::with_path(test_file_path);
         let alias = "1234";
         let path = Path::new("abcd");
 

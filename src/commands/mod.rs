@@ -9,6 +9,7 @@ mod alias_list;
 mod remove_alias_files;
 
 mod console;
+mod run;
 
 
 pub trait Command {
@@ -19,6 +20,7 @@ pub trait Command {
 pub enum Commands {
   /// Register a server script (.sh only)
   Register(register::RegisterArg),
+  Run(run::RunArg),
   Console(console::ConsoleArg),
   /// Rename a registered alias
   Rename(rename::RenameArg),
@@ -36,6 +38,7 @@ impl Commands {
   pub fn run(&self) -> Result<(), anyhow::Error> {
     match self {
       Self::Register(arg) => arg.execute(),
+      Self::Run(arg) => arg.execute(),
       Self::Console(arg) => arg.execute(),
       Self::Rename(arg) => arg.execute(),
       Self::Delete(arg) => arg.execute(),

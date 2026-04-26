@@ -16,7 +16,7 @@ fn build_launch_cmd_str(path: &Path) -> String {
   format!("\"{}\";\\echo -e \"\n{}\" && read", path.to_string_lossy(), process_end_msg)
 }
 
-fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
+pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
   let session_name = &alias_to_session_name(alias);
 
   let mut awaiter = Command::new(TMUX_COMMAND)
@@ -29,7 +29,7 @@ fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
   Ok(())
 }
 
-fn attach_session(alias: &str) -> Result<(), Error> {
+pub fn attach_session(alias: &str) -> Result<(), Error> {
   let session_name = &alias_to_session_name(alias);
 
   Command::new(TMUX_COMMAND)
@@ -39,7 +39,7 @@ fn attach_session(alias: &str) -> Result<(), Error> {
   Ok(())
 }
 
-fn has_session(alias: &str) -> Result<bool, Error> {
+pub fn has_session(alias: &str) -> Result<bool, Error> {
   let session_name = alias_to_session_name(alias);
 
   let output = Command::new(TMUX_COMMAND)

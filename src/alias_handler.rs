@@ -184,51 +184,59 @@ impl AliasManager {
     }
 }
 
-fn main() {
-    let alias_manager = AliasManager::new().unwrap();
-    let alias = "1234";
-    let path = Path::new("abcd");
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    println!("create: alias = {}, path = {}", alias, path.display());
-    alias_manager.create(alias, path).unwrap();
+    #[test]
+    fn test_alias_manager() -> Result<(), anyhow::Error> {
+        let alias_manager = AliasManager::new()?;
+        let alias = "1234";
+        let path = Path::new("abcd");
 
-    alias_manager.show_list().unwrap();
-    println!();
+        println!("creating: alias = {}, path = {}", alias, path.display());
+        alias_manager.create(alias, path)?;
 
-    let alias2 = "4321";
-    let path2 = Path::new("dcba");
+        alias_manager.show_list()?;
+        println!();
 
-    println!("create: alias = {}, path = {}", alias2, path2.display());
-    alias_manager.create(alias2, path2).unwrap();
+        let alias2 = "4321";
+        let path2 = Path::new("dcba");
 
-    alias_manager.show_list().unwrap();
-    println!();
+        println!("creating: alias = {}, path = {}", alias2, path2.display());
+        alias_manager.create(alias2, path2)?;
 
-    let old_alias = "1234";
-    let new_alias = "9876";
+        alias_manager.show_list()?;
+        println!();
 
-    println!("rename alias: {} to {}", old_alias, new_alias);
-    alias_manager.rename(old_alias, new_alias).unwrap();
+        let old_alias = "1234";
+        let new_alias = "9876";
 
-    alias_manager.show_list().unwrap();
-    println!();
+        println!("renaming alias: {} to {}", old_alias, new_alias);
+        alias_manager.rename(old_alias, new_alias)?;
 
-    let alias3 = "4321";
-    let new_path = Path::new("zyxw");
+        alias_manager.show_list()?;
+        println!();
 
-    println!("update on alias {}: new_path = {}", alias3, new_path.display());
-    alias_manager.update(alias3, new_path).unwrap();
+        let alias3 = "4321";
+        let new_path = Path::new("zyxw");
 
-    alias_manager.show_list().unwrap();
-    println!();
+        println!("updating on alias {}: new_path = {}", alias3, new_path.display());
+        alias_manager.update(alias3, new_path)?;
 
-    let alias_to_del = "9876";
+        alias_manager.show_list()?;
+        println!();
 
-    println!("delete: alias = {}", alias_to_del);
-    alias_manager.delete(alias_to_del).unwrap();
+        let alias_to_del = "9876";
 
-    alias_manager.show_list().unwrap();
+        println!("deleting: alias = {}", alias_to_del);
+        alias_manager.delete(alias_to_del)?;
 
-    let _ = alias_manager.remove_alias_file();
-    let _ = alias_manager.remove_alias_temp_file();
+        alias_manager.show_list()?;
+
+        let _ = alias_manager.remove_alias_file();
+        let _ = alias_manager.remove_alias_temp_file();
+
+        Ok(())
+    }
 }

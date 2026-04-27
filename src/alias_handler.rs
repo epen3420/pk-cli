@@ -103,6 +103,18 @@ impl AliasManager {
             return Err(anyhow!("failed to register {}. could register .sh only.", &path.display()));
         }
 
+        if Self::has_alias(&self, &alias)? {
+            let old_path = Self::get_path_by_alias(&self, &alias)?;
+            println!("already registered: {} => {}", alias, old_path.display());
+
+            if &old_path == &path {
+                return Ok(());
+            }
+            else {
+                return Err(anyhow!("please use rename command."));
+            }
+        }
+
         let alias_file = OpenOptions::new()
             .append(true)
             .create(true)

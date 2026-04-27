@@ -29,6 +29,13 @@ impl AliasManager {
         Self { file_path, tmp_path }
     }
 
+    fn is_sh_file(path: &Path) -> bool {
+        match path.extension() {
+            Some(ext) => ext == "sh",
+            None => false
+        }
+    }
+
     fn deserialize_line(line: &str) -> Result<(&str, &Path), Error> {
         let (alias_str, path_str) = line
             .split_once(SPLIT_CHAR)
@@ -92,6 +99,10 @@ impl AliasManager {
     }
 
     pub fn create(&self, alias: &str, path: &Path) -> Result<(), Error> {
+        if Self::is_sh_file(&path) {
+            return Err(anyhow!("failed to register {}. could register .sh only.", &path.display()));
+        }
+
         let alias_file = OpenOptions::new()
             .append(true)
             .create(true)
@@ -115,6 +126,10 @@ impl AliasManager {
     }
 
     pub fn update(&self, alias: &str, new_path: &Path) -> Result<(), Error> {
+        if Self::is_sh_file(&new_path) {
+            return Err(anyhow!("failed to register {}. could register .sh only.", &new_path.display()));
+        }
+
         self.modify_lines(|current_line, current_alias, _| {
             if current_alias == alias {
                 Ok(Some(Self::serialize_line(current_alias, new_path)))

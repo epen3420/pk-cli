@@ -99,7 +99,7 @@ impl AliasManager {
     }
 
     pub fn create(&self, alias: &str, path: &Path) -> Result<(), Error> {
-        if Self::is_sh_file(&path) {
+        if !Self::is_sh_file(&path) {
             return Err(anyhow!("failed to register {}. could register .sh only.", &path.display()));
         }
 

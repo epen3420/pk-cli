@@ -223,12 +223,34 @@ impl AliasManager {
         Err(anyhow!("Alias {} not found", alias))
     }
 
+    pub fn get_alias_and_path_by_num(&self, num: usize) -> Result<(String, PathBuf), Error> {
+        let mut alias_iter = self.alias_iterator()?;
+
+        match alias_iter.nth(num) {
+            Some(s) => s,
+            None => Err(anyhow!("could not found {}th alias and path", num))
+        }
+    }
+
     pub fn show_list(&self) -> Result<(), Error> {
         let alias_iter = self.alias_iterator()?;
 
         for result in alias_iter {
             let (alias, path) = result?;
             println!("{} => {}", alias, path.display());
+        }
+
+        Ok(())
+    }
+
+    pub fn show_list_with_num(&self) -> Result<(), Error> {
+        let alias_iter = self.alias_iterator()?;
+
+        let mut num = 0;
+        for result in alias_iter {
+            let (alias, path) = result?;
+            println!("{}: {} => {}", num, alias, path.display());
+            num += 1;
         }
 
         Ok(())
@@ -310,6 +332,9 @@ mod test {
         alias_manager.delete(alias_to_del)?;
 
         alias_manager.show_list()?;
+        alias_manager.show_list_with_num()?;
+        let (alias4, path4) = alias_manager.get_alias_and_path_by_num(0)?;
+        println!("0th: {} => {}", alias4, path4.display());
 
         let _ = alias_manager.remove_alias_file();
         let _ = alias_manager.remove_alias_temp_file();

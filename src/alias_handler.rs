@@ -257,24 +257,33 @@ mod test {
     use super::*;
     use std::env::temp_dir;
 
+    fn create_tmp_sh_file(name: &str) -> Result<PathBuf, Error> {
+        let path = temp_dir().join(name).with_extension("sh");
+        let mut file = File::create(&path)?;
+
+        file.write_all(b"echo Hello\nread")?;
+
+        Ok(path)
+    }
+
     #[test]
     fn test_alias_manager() -> Result<(), anyhow::Error> {
         let test_file_path = temp_dir().join(".pk_alias_test");
         let alias_manager = AliasManager::with_path(test_file_path);
         let alias = "1234";
-        let path = Path::new("abcd");
+        let path = create_tmp_sh_file("test")?;
 
         println!("creating: alias = {}, path = {}", alias, path.display());
-        alias_manager.create(alias, path)?;
+        alias_manager.create(alias, &path)?;
 
         alias_manager.show_list()?;
         println!();
 
         let alias2 = "4321";
-        let path2 = Path::new("dcba");
+        let path2 = create_tmp_sh_file("test2")?;
 
         println!("creating: alias = {}, path = {}", alias2, path2.display());
-        alias_manager.create(alias2, path2)?;
+        alias_manager.create(alias2, &path2)?;
 
         alias_manager.show_list()?;
         println!();
@@ -289,10 +298,10 @@ mod test {
         println!();
 
         let alias3 = "4321";
-        let new_path = Path::new("zyxw");
+        let new_path = create_tmp_sh_file("test3")?;
 
         println!("updating on alias {}: new_path = {}", alias3, new_path.display());
-        alias_manager.update(alias3, new_path)?;
+        alias_manager.update(alias3, &new_path)?;
 
         alias_manager.show_list()?;
         println!();
@@ -306,6 +315,9 @@ mod test {
 
         let _ = alias_manager.remove_alias_file();
         let _ = alias_manager.remove_alias_temp_file();
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(path2);
+        let _ = fs::remove_file(new_path);
 
         Ok(())
     }

@@ -171,7 +171,9 @@ impl AliasManager {
             } else {
                 Ok(Some(current_line.to_string()))
             }
-        })
+        })?;
+
+        Err(anyhow!("could not found {}", alias))
     }
 
     pub fn is_registered_alias(&self, alias: &str) -> Result<bool, Error> {

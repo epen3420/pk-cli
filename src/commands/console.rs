@@ -5,11 +5,16 @@ use crate::{tmux_handler, commands::Command};
 
 #[derive(Args)]
 pub struct ConsoleArg {
-  alias: String,
+  alias: Option<String>,
 }
 
 impl Command for ConsoleArg {
   fn execute(&self) -> Result<(), Error> {
-    tmux_handler::attach_session(&self.alias)
+    if let Some(alias) = &self.alias {
+      return tmux_handler::attach_session(alias);
+    }
+
+
+    Ok(())
   }
 }

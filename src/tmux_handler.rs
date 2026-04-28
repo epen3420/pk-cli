@@ -39,7 +39,7 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
   Ok(())
 }
 
-pub fn has_session(alias: &str) -> Result<bool, Error> {
+pub fn has_session_of_alias(alias: &str) -> Result<bool, Error> {
   let session_name = alias_to_session_name(alias);
 
   let output = Command::new(TMUX_COMMAND)
@@ -74,7 +74,7 @@ mod tests {
     create_session(alias, &path)?;
 
     println!("{}", path.to_string_lossy());
-    println!("{}", has_session(alias)?);
+    println!("{}", has_session_of_alias(alias)?);
 
     kill_session(alias)?;
 

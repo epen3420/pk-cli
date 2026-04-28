@@ -174,8 +174,8 @@ impl AliasManager {
         if is_found {
             Ok(())
         }else {
-        Err(anyhow!("could not found {}", alias))
-    }
+            Err(anyhow!("could not found {}", alias))
+        }
     }
 
     pub fn delete(&self, alias: &str) -> Result<(), Error> {

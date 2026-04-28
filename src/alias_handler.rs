@@ -137,15 +137,22 @@ impl AliasManager {
     }
 
     pub fn rename(&self, old_alias: &str, new_alias: &str) -> Result<(), Error> {
+        let mut is_found = false;
+
         self.modify_lines(|current_line, current_alias, current_path| {
             if current_alias == old_alias {
+                is_found = true;
                 Ok(Some(Self::serialize_line(new_alias, current_path)))
             } else {
                 Ok(Some(current_line.to_string()))
             }
         })?;
 
-        Err(anyhow!("could not found {}", &old_alias))
+        if is_found {
+            Ok(())
+        }else {
+            Err(anyhow!("could not found {}", old_alias))
+        }
     }
 
     pub fn update(&self, alias: &str, new_path: &Path) -> Result<(), Error> {
@@ -153,27 +160,41 @@ impl AliasManager {
             return Err(anyhow!("failed to register {}. could register .sh only.", &new_path.display()));
         }
 
+        let mut is_found = false;
+
         self.modify_lines(|current_line, current_alias, _| {
             if current_alias == alias {
+                is_found = true;
                 Ok(Some(Self::serialize_line(current_alias, new_path)))
             } else {
                 Ok(Some(current_line.to_string()))
             }
         })?;
 
+        if is_found {
+            Ok(())
+        }else {
         Err(anyhow!("could not found {}", alias))
+    }
     }
 
     pub fn delete(&self, alias: &str) -> Result<(), Error> {
+        let mut is_found = false;
+
         self.modify_lines(|current_line, current_alias, _| {
             if current_alias == alias {
+                is_found = true;
                 Ok(None)
             } else {
                 Ok(Some(current_line.to_string()))
             }
         })?;
 
-        Err(anyhow!("could not found {}", alias))
+        if is_found {
+            Ok(())
+        }else {
+            Err(anyhow!("could not found {}", alias))
+        }
     }
 
     pub fn is_registered_alias(&self, alias: &str) -> Result<bool, Error> {

@@ -103,7 +103,16 @@ impl AliasManager {
             return Err(anyhow!("failed to register {}. could register .sh only.", &path.display()));
         }
 
-        if Self::has_alias(&self, &alias)? {
+        let is_already_registerd = {
+            let already_registerd_result = Self::has_alias(&self, &alias);
+
+            match already_registerd_result {
+                Ok(s) => s,
+                Err(_) => false
+            }
+        };
+
+        if is_already_registerd {
             let old_path = Self::get_path_by_alias(&self, &alias)?;
             println!("already registered: {} => {}", alias, old_path.display());
 

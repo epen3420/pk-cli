@@ -156,7 +156,7 @@ impl AliasManager {
     }
 
     pub fn update(&self, alias: &str, new_path: &Path) -> Result<(), Error> {
-        if Self::is_sh_file(&new_path) {
+        if !Self::is_sh_file(&new_path) {
             return Err(anyhow!("failed to register {}. could register .sh only.", &new_path.display()));
         }
 

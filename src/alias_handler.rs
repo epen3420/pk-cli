@@ -103,16 +103,7 @@ impl AliasManager {
             return Err(anyhow!("failed to register {}. could register .sh only.", &path.display()));
         }
 
-        let is_already_registerd = {
-            let already_registerd_result = Self::is_registered_alias(&self, &alias);
-
-            match already_registerd_result {
-                Ok(s) => s,
-                Err(_) => false
-            }
-        };
-
-        if is_already_registerd {
+        if self.is_registered_alias(alias) {
             let old_path = Self::get_path_by_alias(&self, &alias)?;
             println!("already registered: {} => {}", alias, old_path.display());
 
@@ -137,6 +128,10 @@ impl AliasManager {
     }
 
     pub fn rename(&self, old_alias: &str, new_alias: &str) -> Result<(), Error> {
+        if self.is_registered_alias(new_alias) {
+            return Err(anyhow!("already registered {}", new_alias))
+        }
+
         let mut is_found = false;
 
         self.modify_lines(|current_line, current_alias, current_path| {
@@ -197,18 +192,21 @@ impl AliasManager {
         }
     }
 
-    pub fn is_registered_alias(&self, alias: &str) -> Result<bool, Error> {
-        let alias_iter = self.alias_iterator()?;
+    pub fn is_registered_alias(&self, alias: &str) -> bool {
+        let alias_iter_result = self.alias_iterator();
+        let Ok(alias_iter) = alias_iter_result else {
+            return false;
+        };
 
         for result in alias_iter {
-            let (current_alias, _) = result?;
+            let Ok((current_alias, _)) = result else {continue;};
 
             if current_alias == alias {
-                return Ok(true);
+                return true;
             }
         }
 
-        Ok(false)
+        false
     }
 
     pub fn get_path_by_alias(&self, alias: &str) -> Result<PathBuf, Error>{

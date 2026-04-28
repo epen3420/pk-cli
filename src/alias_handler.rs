@@ -104,7 +104,7 @@ impl AliasManager {
         }
 
         let is_already_registerd = {
-            let already_registerd_result = Self::has_alias(&self, &alias);
+            let already_registerd_result = Self::is_registered_alias(&self, &alias);
 
             match already_registerd_result {
                 Ok(s) => s,
@@ -170,7 +170,7 @@ impl AliasManager {
         })
     }
 
-    pub fn has_alias(&self, alias: &str) -> Result<bool, Error> {
+    pub fn is_registered_alias(&self, alias: &str) -> Result<bool, Error> {
         let alias_iter = self.alias_iterator()?;
 
         for result in alias_iter {

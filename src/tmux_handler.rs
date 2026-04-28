@@ -39,15 +39,18 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
   Ok(())
 }
 
-pub fn has_session_of_alias(alias: &str) -> Result<bool, Error> {
+pub fn has_session_of_alias(alias: &str) -> bool {
   let session_name = alias_to_session_name(alias);
 
-  let output = Command::new(TMUX_COMMAND)
+  let output_result = Command::new(TMUX_COMMAND)
   .args(["has-session", "-t", &session_name])
   .output()
-  .with_context(|| "failed to get session status")?;
+  .with_context(|| "failed to get session status");
 
-  Ok(output.status.success())
+  match output_result {
+    Ok(output) => output.status.success(),
+    Err(_) => false
+  }
 }
 
 
@@ -74,7 +77,7 @@ mod tests {
     create_session(alias, &path)?;
 
     println!("{}", path.to_string_lossy());
-    println!("{}", has_session_of_alias(alias)?);
+    println!("{}", has_session_of_alias(alias));
 
     kill_session(alias)?;
 

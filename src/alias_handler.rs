@@ -143,7 +143,9 @@ impl AliasManager {
             } else {
                 Ok(Some(current_line.to_string()))
             }
-        })
+        })?;
+
+        Err(anyhow!("could not found {}", &old_alias))
     }
 
     pub fn update(&self, alias: &str, new_path: &Path) -> Result<(), Error> {

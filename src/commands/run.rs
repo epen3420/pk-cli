@@ -1,7 +1,7 @@
 use anyhow::Error;
 use clap::Args;
 
-use crate::{alias_handler, commands::Command, tmux_handler};
+use crate::{alias_handler, commands::Command, input_util, tmux_handler};
 
 #[derive(Args)]
 pub struct RunArg {
@@ -18,15 +18,9 @@ impl Command for RunArg {
     }
 
     alaias_man.show_list_with_num()?;
-    let num = get_input();
+    let num = input_util::get_input();
 
     let (alias, path) = alaias_man.get_alias_and_path_by_num(num)?;
     tmux_handler::create_session(&alias, &path)
   }
-}
-
-fn get_input() -> usize {
-    let mut word = String::new();
-    std::io::stdin().read_line(&mut word).ok();
-    return word.trim().parse().ok().unwrap();
 }

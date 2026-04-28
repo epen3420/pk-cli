@@ -4,6 +4,7 @@ use std::process;
 use crate::commands::{Commands};
 
 mod commands;
+mod input_util;
 mod alias_handler;
 mod tmux_handler;
 

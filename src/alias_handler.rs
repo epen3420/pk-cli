@@ -159,7 +159,9 @@ impl AliasManager {
             } else {
                 Ok(Some(current_line.to_string()))
             }
-        })
+        })?;
+
+        Err(anyhow!("could not found {}", alias))
     }
 
     pub fn delete(&self, alias: &str) -> Result<(), Error> {

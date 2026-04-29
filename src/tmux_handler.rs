@@ -69,17 +69,17 @@ pub fn has_running_session() -> bool {
 }
 
 pub fn has_session_of_alias(alias: &str) -> bool {
-  let session_name = alias_to_session_name(alias);
+  let Ok(sessions) = get_running_session_of_pk() else {
+    return  false;
+  };
 
-  let output_result = Command::new(TMUX_COMMAND)
-  .args(["has-session", "-t", &session_name])
-  .output()
-  .with_context(|| "failed to get session status");
-
-  match output_result {
-    Ok(output) => output.status.success(),
-    Err(_) => false
+  for session in sessions {
+    if alias == session {
+      return  true;
+    }
   }
+
+  false
 }
 
 

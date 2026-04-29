@@ -108,10 +108,10 @@ impl AliasManager {
             println!("already registered: {} => {}", alias, old_path.display());
 
             if &old_path == &path {
-                return Ok(());
+                return Err(anyhow!("please use rename command."));
             }
             else {
-                return Err(anyhow!("please use rename command."));
+                return Ok(());
             }
         }
 

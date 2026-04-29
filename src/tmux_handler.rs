@@ -5,13 +5,14 @@ use anyhow::{Error, anyhow, bail};
 
 
 const TMUX_COMMAND: &str = "tmux";
+const TMUX_SESSION_NAME_PREFIX: &str = "pk_";
 
 fn alias_to_session_name(alias: &str) -> String {
-  format!("pk_{}", alias)
+  format!("{}{}", TMUX_SESSION_NAME_PREFIX, alias)
 }
 
 fn session_name_to_alias(session_name: &str) -> Option<&str> {
-  if let Some((_, after)) = session_name.split_once("pk_") {
+  if let Some((_, after)) = session_name.split_once(TMUX_SESSION_NAME_PREFIX) {
     return Some(after);
   }
 

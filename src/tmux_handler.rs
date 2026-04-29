@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::{path::Path, process::Command};
-use anyhow::{Error, anyhow};
+use anyhow::{Error, anyhow, bail};
 
 
 const TMUX_COMMAND: &str = "tmux";
@@ -61,7 +61,7 @@ pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
     .status()?;
 
   if !status.success() {
-    return Err(anyhow!("failed to create session {}", alias));
+    bail!(anyhow!("failed to create session {}", alias));
   }
 
   Ok(())
@@ -79,7 +79,7 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
     .status()?;
 
   if !status.success() {
-    return Err(anyhow!("failed to attach session {}", alias));
+    bail!(anyhow!("failed to attach session {}", alias));
   }
 
   Ok(())

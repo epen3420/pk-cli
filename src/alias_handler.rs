@@ -226,9 +226,10 @@ impl AliasManager {
     pub fn get_alias_and_path_by_num(&self, num: usize) -> Result<(String, PathBuf), Error> {
         let mut alias_iter = self.alias_iterator()?;
 
-        match alias_iter.nth(num) {
+        let index = num - 1;
+        match alias_iter.nth(index) {
             Some(s) => s,
-            None => Err(anyhow!("could not found {}th alias and path", num))
+            None => Err(anyhow!("could not found {}th alias and path", index))
         }
     }
 
@@ -237,7 +238,7 @@ impl AliasManager {
 
         for result in alias_iter {
             let (alias, path) = result?;
-            println!("{} => {}", alias, path.display());
+            println!("   {} => {}", alias, path.display());
         }
 
         Ok(())
@@ -246,10 +247,10 @@ impl AliasManager {
     pub fn show_list_with_num(&self) -> Result<(), Error> {
         let alias_iter = self.alias_iterator()?;
 
-        let mut num = 0;
+        let mut num = 1;
         for result in alias_iter {
             let (alias, path) = result?;
-            println!("{}: {} => {}", num, alias, path.display());
+            println!("   {}) {} => {}", num, alias, path.display());
             num += 1;
         }
 

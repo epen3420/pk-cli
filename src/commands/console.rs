@@ -22,13 +22,19 @@ impl Command for ConsoleArg {
     }
 
     println!("===== Current running sessions =====");
-    let mut count = 0;
+    let mut count = 1;
     for alias in &running_alias {
       println!("{}: {}", count, alias);
       count += 1;
     }
+    println!();
+    let num = input_util::get_input_num()?;
+    let index = num - 1;
 
-    let input_num = input_util::get_input();
-    tmux_handler::attach_session(&running_alias[input_num])
+    if index <= 0 {
+      return Ok(());
+    }
+
+    tmux_handler::attach_session(&running_alias[index])
   }
 }

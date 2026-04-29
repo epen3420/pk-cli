@@ -19,10 +19,17 @@ fn session_name_to_alias(session_name: &str) -> Option<&str> {
   None
 }
 
-fn build_launch_cmd_str(path: &Path) -> String {
+fn build_launch_cmd_str(path: &Path) -> Result<String, Error> {
   let process_end_msg = "[Process exited. Press Enter to close session...]";
 
-  format!("\"{}\";\\echo -e \"\n{}\" && read", path.to_string_lossy(), process_end_msg)
+  let Some(dir) = path.parent() else {
+    return Err(anyhow!("Invalid path {}", path.display()));
+  };
+  let Some(file) = path.file_name() else {
+    return Err(anyhow!("Invalid path {}", path.display()));
+  };
+
+  Ok(format!("cd {} && \"./{}\";\\echo -e \"\n{}\" && read", dir.to_string_lossy(), file.to_string_lossy(), process_end_msg))
 }
 
 pub fn get_running_alias() -> Result<Vec<String>, Error> {
@@ -58,7 +65,7 @@ pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
   let session_name = &alias_to_session_name(alias);
 
   let status = Command::new(TMUX_COMMAND)
-    .args(["new-session", "-d", "-s", &session_name, &build_launch_cmd_str(&path)])
+    .args(["new-session", "-d", "-s", &session_name, &build_launch_cmd_str(&path)?])
     .status()?;
 
   if !status.success() {

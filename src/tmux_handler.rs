@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{path::{Path}, process::Command};
+use std::{path::Path, process::Command};
 use anyhow::{Context, Error};
 
 
@@ -14,6 +14,27 @@ fn build_launch_cmd_str(path: &Path) -> String {
   let process_end_msg = "[Process exited. Press Enter to close session...]";
 
   format!("\"{}\";\\echo -e \"\n{}\" && read", path.to_string_lossy(), process_end_msg)
+}
+
+fn get_running_session_of_pk() -> Result<Vec<String>, Error> {
+  let output = Command::new(TMUX_COMMAND)
+    .arg("ls")
+    .output()
+    .with_context(|| format!("no running {} sessions", TMUX_COMMAND))?;
+
+  let std_output = &String::from_utf8_lossy(&output.stdout);
+
+  let lines = std_output
+    .lines()
+    .filter_map(|line| {
+      match line.split_once(":") {
+        Some((before, _after)) => Some(before.to_string()),
+        None => None
+      }
+    })
+    .collect();
+
+  Ok(lines)
 }
 
 pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {

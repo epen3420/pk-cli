@@ -20,7 +20,9 @@ pub trait Command {
 pub enum Commands {
   /// Register a server script (.sh only)
   Register(register::RegisterArg),
+  /// Run a registered alias
   Run(run::RunArg),
+  /// Attach to server screen (interactive if empty)
   Console(console::ConsoleArg),
   /// Rename a registered alias
   Rename(rename::RenameArg),

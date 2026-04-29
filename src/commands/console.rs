@@ -5,6 +5,7 @@ use crate::{commands::Command, input_util, tmux_handler};
 
 #[derive(Args)]
 pub struct ConsoleArg {
+  /// The session alias to attach to. If omitted, prompts for a running session.
   alias: Option<String>,
 }
 

@@ -60,6 +60,14 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
   Ok(())
 }
 
+pub fn has_running_session() -> bool {
+  let Ok(sessions) = get_running_session_of_pk() else {
+    return  false;
+  };
+
+  sessions.len() > 0
+}
+
 pub fn has_session_of_alias(alias: &str) -> bool {
   let session_name = alias_to_session_name(alias);
 

@@ -17,7 +17,6 @@ impl Command for RunArg {
       return tmux_handler::create_session(alias, &path);
     }
 
-    println!("Select a server to run:");
     alaias_man.show_list_with_num()?;
     println!();
     let num = input_util::get_input_num()?;

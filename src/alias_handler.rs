@@ -236,6 +236,7 @@ impl AliasManager {
     pub fn show_list(&self) -> Result<(), Error> {
         let alias_iter = self.alias_iterator()?;
 
+        println!("Registered aliases:");
         for result in alias_iter {
             let (alias, path) = result?;
             println!("   {} => {}", alias, path.display());
@@ -247,6 +248,7 @@ impl AliasManager {
     pub fn show_list_with_num(&self) -> Result<(), Error> {
         let alias_iter = self.alias_iterator()?;
 
+        println!("Registered aliases:");
         let mut num = 1;
         for result in alias_iter {
             let (alias, path) = result?;

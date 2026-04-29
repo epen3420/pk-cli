@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::{path::Path, process::Command};
-use anyhow::{Context, Error, anyhow};
+use anyhow::{Error, anyhow};
 
 
 const TMUX_COMMAND: &str = "tmux";
@@ -27,8 +27,11 @@ fn build_launch_cmd_str(path: &Path) -> String {
 pub fn get_running_alias() -> Result<Vec<String>, Error> {
   let output = Command::new(TMUX_COMMAND)
     .arg("ls")
-    .output()
-    .with_context(|| format!("no running {} sessions", TMUX_COMMAND))?;
+    .output()?;
+
+  if !output.status.success() {
+    return Err(anyhow!("No running session"));
+  }
 
   let std_output = &String::from_utf8_lossy(&output.stdout);
 
@@ -53,12 +56,13 @@ pub fn get_running_alias() -> Result<Vec<String>, Error> {
 pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
   let session_name = &alias_to_session_name(alias);
 
-  let mut awaiter = Command::new(TMUX_COMMAND)
+  let status = Command::new(TMUX_COMMAND)
     .args(["new-session", "-d", "-s", &session_name, &build_launch_cmd_str(&path)])
-    .spawn()
-    .with_context(|| format!("failed to create {}", &session_name))?;
+    .status()?;
 
-  awaiter.wait().with_context(|| format!("failed to run {}", &session_name))?;
+  if !status.success() {
+    return Err(anyhow!("failed to create session"));
+  }
 
   Ok(())
 }
@@ -70,9 +74,13 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
 
   let session_name = &alias_to_session_name(alias);
 
-  Command::new(TMUX_COMMAND)
+  let status = Command::new(TMUX_COMMAND)
     .args(["attach", "-t", session_name])
     .status()?;
+
+  if !status.success() {
+    return Err(anyhow!("failed to attach session"));
+  }
 
   Ok(())
 }

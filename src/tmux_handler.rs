@@ -61,7 +61,7 @@ pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
     .status()?;
 
   if !status.success() {
-    return Err(anyhow!("failed to create session"));
+    return Err(anyhow!("failed to create session {}", alias));
   }
 
   Ok(())
@@ -79,7 +79,7 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
     .status()?;
 
   if !status.success() {
-    return Err(anyhow!("failed to attach session"));
+    return Err(anyhow!("failed to attach session {}", alias));
   }
 
   Ok(())

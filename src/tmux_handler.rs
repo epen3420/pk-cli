@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::{path::Path, process::Command};
-use anyhow::{Context, Error};
+use anyhow::{Context, Error, anyhow};
 
 
 const TMUX_COMMAND: &str = "tmux";
@@ -10,13 +10,21 @@ fn alias_to_session_name(alias: &str) -> String {
   format!("pk_{}", alias)
 }
 
+fn session_name_to_alias(session_name: &str) -> Option<&str> {
+  if let Some((_, after)) = session_name.split_once("pk_") {
+    return Some(after);
+  }
+
+  None
+}
+
 fn build_launch_cmd_str(path: &Path) -> String {
   let process_end_msg = "[Process exited. Press Enter to close session...]";
 
   format!("\"{}\";\\echo -e \"\n{}\" && read", path.to_string_lossy(), process_end_msg)
 }
 
-fn get_running_session_of_pk() -> Result<Vec<String>, Error> {
+pub fn get_running_alias() -> Result<Vec<String>, Error> {
   let output = Command::new(TMUX_COMMAND)
     .arg("ls")
     .output()
@@ -27,10 +35,15 @@ fn get_running_session_of_pk() -> Result<Vec<String>, Error> {
   let lines = std_output
     .lines()
     .filter_map(|line| {
-      match line.split_once(":") {
-        Some((before, _after)) => Some(before.to_string()),
-        None => None
-      }
+      let Some((before, _)) = line.split_once(":") else {
+        return None;
+      };
+
+      let Some(alias) = session_name_to_alias(before) else {
+        return  None;
+      };
+
+      Some(alias.to_string())
     })
     .collect();
 
@@ -51,6 +64,10 @@ pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
 }
 
 pub fn attach_session(alias: &str) -> Result<(), Error> {
+  if !has_running_session() {
+    return Err(anyhow!("could not found running session"));
+  }
+
   let session_name = &alias_to_session_name(alias);
 
   Command::new(TMUX_COMMAND)
@@ -61,25 +78,11 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
 }
 
 pub fn has_running_session() -> bool {
-  let Ok(sessions) = get_running_session_of_pk() else {
+  let Ok(sessions) = get_running_alias() else {
     return  false;
   };
 
   sessions.len() > 0
-}
-
-pub fn has_session_of_alias(alias: &str) -> bool {
-  let Ok(sessions) = get_running_session_of_pk() else {
-    return  false;
-  };
-
-  for session in sessions {
-    if alias == session {
-      return  true;
-    }
-  }
-
-  false
 }
 
 
@@ -106,7 +109,6 @@ mod tests {
     create_session(alias, &path)?;
 
     println!("{}", path.to_string_lossy());
-    println!("{}", has_session_of_alias(alias));
 
     kill_session(alias)?;
 

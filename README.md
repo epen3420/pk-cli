@@ -24,6 +24,11 @@ chmod +x pk
 sudo mv pk /usr/local/bin/
 ```
 
+#### 以下をコピペすることでも可能
+```bash
+wget https://github.com/epen3420/pk-cli/releases/download/v1.0.1/pk && chmod +x pk && sudo mv pk /usr/local/bin/
+```
+
 ### ソースコードからビルドする場合
 Rustの開発環境(Cargo)が必要です。リポジトリをクローンし、以下のコマンドでインストールしてください。
 

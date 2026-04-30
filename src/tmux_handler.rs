@@ -3,6 +3,8 @@
 use std::{path::Path, process::Command};
 use anyhow::{Error, anyhow, bail};
 
+use crate::input_util;
+
 
 const TMUX_COMMAND: &str = "tmux";
 const TMUX_SESSION_NAME_PREFIX: &str = "pk_";
@@ -32,7 +34,7 @@ fn build_launch_cmd_str(path: &Path) -> Result<String, Error> {
   Ok(format!("cd {} && \"./{}\";\\echo -e \"\n{}\" && read", dir.to_string_lossy(), file.to_string_lossy(), process_end_msg))
 }
 
-pub fn get_running_alias() -> Result<Vec<String>, Error> {
+fn get_running_alias() -> Result<Vec<String>, Error> {
   let output = Command::new(TMUX_COMMAND)
     .arg("ls")
     .output()?;
@@ -91,6 +93,30 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
   }
 
   Ok(())
+}
+
+pub fn attach_session_interactive() -> Result<(), Error> {
+  let running_alias = get_running_alias()?;
+
+  if running_alias.len() == 1 {
+    return attach_session(&running_alias[0]);
+  }
+
+  println!("===== Current running sessions =====");
+  let mut count = 1;
+  for alias in &running_alias {
+    println!("{}: {}", count, alias);
+    count += 1;
+  }
+  println!();
+  let num = input_util::get_input_num()?;
+  let index = num - 1;
+
+  if index <= 0 {
+    return Ok(());
+  }
+
+  attach_session(&running_alias[index])
 }
 
 pub fn has_running_session() -> bool {

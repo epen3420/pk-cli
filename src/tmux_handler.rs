@@ -84,13 +84,9 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
 
   let session_name = &alias_to_session_name(alias);
 
-  let output = Command::new(TMUX_COMMAND)
+  Command::new(TMUX_COMMAND)
     .args(["attach", "-t", session_name])
-    .output()?;
-
-  if !output.status.success() {
-    bail!("failed to attach session of \"{}\"", alias);
-  }
+    .status()?;
 
   Ok(())
 }

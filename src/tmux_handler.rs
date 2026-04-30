@@ -108,10 +108,6 @@ pub fn attach_session_interactive() -> Result<(), Error> {
   let num = input_util::get_input_num()?;
   let index = num - 1;
 
-  if index <= 0 {
-    return Ok(());
-  }
-
   attach_session(&running_alias[index])
 }
 

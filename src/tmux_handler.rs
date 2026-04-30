@@ -66,12 +66,12 @@ fn get_running_alias() -> Result<Vec<String>, Error> {
 pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
   let session_name = &alias_to_session_name(alias);
 
-  let status = Command::new(TMUX_COMMAND)
+  let output = Command::new(TMUX_COMMAND)
     .args(["new-session", "-d", "-s", &session_name, &build_launch_cmd_str(&path)?])
-    .status()?;
+    .output()?;
 
-  if !status.success() {
-    bail!(anyhow!("failed to create session of \"{}\"", alias));
+  if !output.status.success() {
+    bail!("already running \"{}\"", alias);
   }
 
   Ok(())
@@ -84,12 +84,12 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
 
   let session_name = &alias_to_session_name(alias);
 
-  let status = Command::new(TMUX_COMMAND)
+  let output = Command::new(TMUX_COMMAND)
     .args(["attach", "-t", session_name])
-    .status()?;
+    .output()?;
 
-  if !status.success() {
-    bail!(anyhow!("failed to attach session of \"{}\"", alias));
+  if !output.status.success() {
+    bail!("failed to attach session of \"{}\"", alias);
   }
 
   Ok(())

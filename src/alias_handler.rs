@@ -4,7 +4,7 @@ use std::env::home_dir;
 use std::path::{Path, PathBuf};
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow, bail};
 
 const ALIAS_FILE_NAME: &str = ".pk_alias";
 const SPLIT_CHAR: char = ':';
@@ -49,7 +49,10 @@ impl AliasManager {
     }
 
     fn alias_iterator(&self) -> Result<impl Iterator<Item = Result<(String, PathBuf), Error>>, Error> {
-        let alias_file = File::open(&self.file_path).context("Failed to open alias file")?;
+        let alias_file_result = File::open(&self.file_path);
+        let Ok(alias_file) = alias_file_result else {
+            bail!("could not found registered alias")
+        };
         let reader = BufReader::new(alias_file);
 
         let iter = reader.lines().map(|line_result| {

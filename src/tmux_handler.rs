@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{path::Path, process::Command};
+use std::{os::unix::process::CommandExt, path::Path, process::Command};
 use anyhow::{Error, anyhow, bail};
 
 use crate::input_util;
@@ -84,11 +84,11 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
 
   let session_name = &alias_to_session_name(alias);
 
-  Command::new(TMUX_COMMAND)
+  let err = Command::new(TMUX_COMMAND)
     .args(["attach", "-t", session_name])
-    .status()?;
+    .exec();
 
-  Ok(())
+  bail!("failed to attach to tmux session '{}': {}", session_name, err);
 }
 
 pub fn attach_session_interactive() -> Result<(), Error> {

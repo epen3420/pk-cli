@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
-use std::{path::Path, process::Command};
+use std::{os::unix::process::CommandExt, path::Path, process::Command};
 use anyhow::{Error, anyhow, bail};
+
+use crate::input_util;
 
 
 const TMUX_COMMAND: &str = "tmux";
@@ -19,13 +21,20 @@ fn session_name_to_alias(session_name: &str) -> Option<&str> {
   None
 }
 
-fn build_launch_cmd_str(path: &Path) -> String {
+fn build_launch_cmd_str(path: &Path) -> Result<String, Error> {
   let process_end_msg = "[Process exited. Press Enter to close session...]";
 
-  format!("\"{}\";\\echo -e \"\n{}\" && read", path.to_string_lossy(), process_end_msg)
+  let Some(dir) = path.parent() else {
+    return Err(anyhow!("Invalid path {}", path.display()));
+  };
+  let Some(file) = path.file_name() else {
+    return Err(anyhow!("Invalid path {}", path.display()));
+  };
+
+  Ok(format!("cd {} && \"./{}\";\\echo -e \"\n{}\" && read", dir.to_string_lossy(), file.to_string_lossy(), process_end_msg))
 }
 
-pub fn get_running_alias() -> Result<Vec<String>, Error> {
+fn get_running_alias() -> Result<Vec<String>, Error> {
   let output = Command::new(TMUX_COMMAND)
     .arg("ls")
     .output()?;
@@ -57,12 +66,12 @@ pub fn get_running_alias() -> Result<Vec<String>, Error> {
 pub fn create_session(alias: &str, path: &Path) -> Result<(), Error> {
   let session_name = &alias_to_session_name(alias);
 
-  let status = Command::new(TMUX_COMMAND)
-    .args(["new-session", "-d", "-s", &session_name, &build_launch_cmd_str(&path)])
-    .status()?;
+  let output = Command::new(TMUX_COMMAND)
+    .args(["new-session", "-d", "-s", &session_name, &build_launch_cmd_str(&path)?])
+    .output()?;
 
-  if !status.success() {
-    bail!(anyhow!("failed to create session of \"{}\"", alias));
+  if !output.status.success() {
+    bail!("already running \"{}\"", alias);
   }
 
   Ok(())
@@ -75,15 +84,31 @@ pub fn attach_session(alias: &str) -> Result<(), Error> {
 
   let session_name = &alias_to_session_name(alias);
 
-  let status = Command::new(TMUX_COMMAND)
+  let err = Command::new(TMUX_COMMAND)
     .args(["attach", "-t", session_name])
-    .status()?;
+    .exec();
 
-  if !status.success() {
-    bail!(anyhow!("failed to attach session of \"{}\"", alias));
+  bail!("failed to attach to tmux session '{}': {}", session_name, err);
+}
+
+pub fn attach_session_interactive() -> Result<(), Error> {
+  let running_alias = get_running_alias()?;
+
+  if running_alias.len() == 1 {
+    return attach_session(&running_alias[0]);
   }
 
-  Ok(())
+  println!("===== Current running sessions =====");
+  let mut count = 1;
+  for alias in &running_alias {
+    println!("{}: {}", count, alias);
+    count += 1;
+  }
+  println!();
+  let num = input_util::get_input_num()?;
+  let index = num - 1;
+
+  attach_session(&running_alias[index])
 }
 
 pub fn has_running_session() -> bool {
